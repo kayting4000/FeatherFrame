@@ -29,9 +29,9 @@ import com.featherframe.app.domain.ai.BirdClassifier
 import com.featherframe.app.domain.camera.ManualCameraEngine
 import com.featherframe.app.domain.location.GPSManager
 import com.featherframe.app.domain.auth.SessionManager
-import com.featherframe.app.domain.auth.GoogleAuthHelper
 import com.featherframe.app.data.processing.ImageProcessor
 import com.featherframe.app.ui.screens.*
+import kotlinx.coroutines.delay
 import com.featherframe.app.ui.workers.SyncUploadWorker
 import java.io.File
 
@@ -42,7 +42,6 @@ import java.io.File
 class MainActivity : ComponentActivity() {
 
     private lateinit var sessionManager: SessionManager
-    private lateinit var googleAuthHelper: GoogleAuthHelper
     private lateinit var cameraEngine: ManualCameraEngine
     private lateinit var birdClassifier: BirdClassifier
     private lateinit var gpsManager: GPSManager
@@ -53,7 +52,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         sessionManager = SessionManager(applicationContext)
-        googleAuthHelper = GoogleAuthHelper(applicationContext)
         cameraEngine = ManualCameraEngine(applicationContext)
         birdClassifier = BirdClassifier(applicationContext)
         gpsManager = GPSManager(applicationContext)
@@ -68,7 +66,6 @@ class MainActivity : ComponentActivity() {
             FeatherFrameTheme {
                 FeatherFrameNavHost(
                     sessionManager = sessionManager,
-                    googleAuthHelper = googleAuthHelper,
                     cameraEngine = cameraEngine,
                     birdClassifier = birdClassifier,
                     gpsManager = gpsManager,
@@ -188,10 +185,13 @@ fun FeatherFrameTheme(content: @Composable () -> Unit) {
  * Navigation destinations.
  */
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Login : Screen("login")
     object Camera : Screen("camera")
     object NewsFeed : Screen("newsfeed")
     object Profile : Screen("profile")
+    object UserGallery : Screen("user_gallery/{name}/{id}")
+    object CaptureDetail : Screen("capture_detail/{captureId}")
 }
 
 data class BottomNavItem(
@@ -210,7 +210,6 @@ private val bottomNavItems = listOf(
 @Composable
 fun FeatherFrameNavHost(
     sessionManager: SessionManager,
-    googleAuthHelper: GoogleAuthHelper,
     cameraEngine: ManualCameraEngine,
     birdClassifier: BirdClassifier,
     gpsManager: GPSManager,
@@ -223,7 +222,8 @@ fun FeatherFrameNavHost(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val showBottomBar = currentDestination?.route != Screen.Login.route
+    val showBottomBar = currentDestination?.route != Screen.Login.route &&
+            currentDestination?.route != Screen.Splash.route
 
     Scaffold(
         bottomBar = {
@@ -274,11 +274,23 @@ fun FeatherFrameNavHost(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = if (isUserLoggedIn) Screen.NewsFeed.route else Screen.Login.route,
+            startDestination = Screen.Splash.route,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            composable(Screen.Splash.route) {
+                SplashScreen(
+                    onSplashComplete = {
+                        navController.navigate(
+                            if (isUserLoggedIn) Screen.NewsFeed.route else Screen.Login.route
+                        ) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(Screen.Login.route) {
                 LoginScreen(
                     sessionManager = sessionManager,
@@ -316,25 +328,32 @@ fun FeatherFrameNavHost(
                         .getAllCaptures()
                 }
                 val captures by captureFlow.collectAsState(initial = emptyList())
+                var isRefreshing by remember { mutableStateOf(false) }
 
-                NewsFeedScreen(
-                    captures = captures,
-                    photographerName = sessionManager.getFullName() ?: "Photographer",
-                    onCameraClick = {
-                        navController.navigate(Screen.Camera.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                Column {
+                    SyncLoadingBar(isLoading = isRefreshing)
+
+                    NewsFeedScreen(
+                        captures = captures,
+                        photographerName = sessionManager.getFullName() ?: "Photographer",
+                        onCameraClick = {
+                            navController.navigate(Screen.Camera.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
                             }
-                            launchSingleTop = true
+                        },
+                        onRefresh = {
+                            // Simulate refresh delay
                         }
-                    }
-                )
+                    )
+                }
             }
 
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     sessionManager = sessionManager,
-                    googleAuthHelper = googleAuthHelper,
                     onLogout = {
                         isUserLoggedIn = false
                         navController.navigate(Screen.Login.route) {

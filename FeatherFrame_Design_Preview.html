@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FeatherFrame - Design Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    background: #f0f0f0; 
+    font-family: 'Inter', -apple-system, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px;
+  }
+  h1 { font-weight: 300; font-size: 28px; letter-spacing: 4px; color: #111; margin-bottom: 40px; }
+  h1 span { font-weight: 600; }
+  .subtitle { color: #999; font-size: 12px; letter-spacing: 3px; margin-top: -30px; margin-bottom: 40px; }
+  
+  .phone-frame {
+    width: 375px; min-height: 750px;
+    background: white;
+    border-radius: 40px;
+    box-shadow: 0 0 0 8px #ddd, 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+    margin: 20px;
+    display: inline-block;
+    vertical-align: top;
+  }
+  
+  .phone-inner { padding: 20px; }
+  .notch { width: 120px; height: 24px; background: #eee; border-radius: 0 0 16px 16px; margin: 0 auto 10px; }
+  
+  .screen-label { text-align: center; font-size: 10px; color: #bbb; letter-spacing: 2px; margin-bottom: 10px; padding-top: 5px; border-top: 1px solid #eee; }
+
+  /* ========== SCREEN 1: LOGIN ========== */
+  .login { text-align: center; padding-top: 40px; }
+  .login .logo-feather { font-size: 38px; font-weight: 300; letter-spacing: 8px; color: #111; line-height: 1; }
+  .login .logo-frame { font-size: 38px; font-weight: 700; letter-spacing: 8px; color: #111; line-height: 1; }
+  .login .tagline { font-size: 11px; color: #bbb; letter-spacing: 4px; margin-top: 8px; }
+  .login .card {
+    margin-top: 40px; border: 1px solid #ddd; border-radius: 16px; padding: 24px; text-align: left;
+  }
+  .login .card h3 { text-align: center; font-weight: 500; font-size: 18px; margin-bottom: 20px; color: #111; }
+  .login .input { 
+    border: 1px solid #ddd; border-radius: 10px; padding: 14px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; color: #999; font-size: 13px;
+  }
+  .login .input .icon { color: #ccc; font-size: 16px; }
+  .login .btn {
+    border: 1px solid #111; border-radius: 10px; padding: 14px; text-align: center;
+    font-weight: 500; font-size: 14px; color: #111; margin-top: 20px; cursor: pointer;
+    transition: 0.2s;
+  }
+  .login .btn:hover { background: #111; color: white; }
+  .login .link { text-align: center; color: #aaa; font-size: 13px; margin-top: 16px; }
+
+  /* ========== SCREEN 2: CAMERA ========== */
+  .camera-top { display: flex; justify-content: space-between; padding: 8px 0 16px; font-size: 12px; letter-spacing: 1px; color: #666; }
+  .camera-top .live { color: #111; }
+  .camera-viewfinder {
+    background: #f5f5f5; height: 250px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #ccc; letter-spacing: 1px;
+    border: 1px solid #eee;
+  }
+  .camera-controls {
+    border: 1px solid #ddd; border-radius: 14px; padding: 14px; margin-top: 8px;
+  }
+  .camera-controls .ctrl-label { font-size: 11px; color: #aaa; letter-spacing: 1px; margin-bottom: 8px; }
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .slider-row .label { font-size: 11px; color: #aaa; width: 40px; }
+  .slider-row .track { flex: 1; height: 4px; background: #eee; border-radius: 2px; position: relative; }
+  .slider-row .track .fill { height: 100%; width: 60%; background: #111; border-radius: 2px; }
+  .slider-row .track .thumb { width: 14px; height: 14px; background: #111; border-radius: 50%; position: absolute; top: -5px; left: 55%; }
+  .slider-row .val { font-size: 11px; color: #111; width: 45px; text-align: right; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 8px; }
+  .chip { border: 1px solid #ddd; border-radius: 6px; padding: 4px 8px; font-size: 9px; color: #666; }
+  .chip.active { background: #111; color: white; border-color: #111; }
+  .camera-bottom {
+    display: flex; justify-content: space-around; align-items: center; padding: 16px 0 0;
+  }
+  .camera-bottom .icon-btn { font-size: 20px; color: #aaa; }
+  .camera-bottom .shutter {
+    width: 64px; height: 64px; border: 2px solid #111; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .camera-bottom .shutter .dot { width: 16px; height: 16px; background: #111; border-radius: 50%; }
+  .camera-status { text-align: center; font-size: 11px; color: #aaa; margin-top: 6px; }
+
+  /* ========== SCREEN 3: FEED ========== */
+  .feed-header { display: flex; justify-content: space-between; padding: 8px 0 16px; align-items: center; }
+  .feed-header h2 { font-weight: 400; font-size: 22px; letter-spacing: 1px; color: #111; }
+  .feed-header .cam-icon { font-size: 22px; color: #111; }
+  .feed-card {
+    border: 1px solid #e5e5e5; border-radius: 14px; padding: 0; margin-bottom: 12px;
+  }
+  .feed-card .user {
+    display: flex; align-items: center; gap: 10px; padding: 12px;
+  }
+  .feed-card .user .avatar {
+    width: 34px; height: 34px; border-radius: 50%; background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #aaa;
+  }
+  .feed-card .user .name { font-weight: 500; font-size: 13px; color: #111; }
+  .feed-card .user .species { font-size: 11px; color: #bbb; }
+  .feed-card .user .coords { font-size: 9px; color: #ddd; margin-left: auto; }
+  .feed-card .image {
+    height: 180px; background: #fafafa; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #eee;
+  }
+  .feed-card .actions {
+    display: flex; align-items: center; padding: 6px 8px; gap: 4px;
+  }
+  .feed-card .actions .icon-like { font-size: 18px; color: #ccc; cursor: pointer; }
+  .feed-card .actions .icon-like.liked { color: #111; }
+  .feed-card .actions .icon-comment { font-size: 18px; color: #ccc; }
+  .feed-card .actions .date { font-size: 10px; color: #ddd; margin-left: auto; }
+
+  /* ========== SCREEN 4: PROFILE ========== */
+  .profile { text-align: center; }
+  .profile .avatar-lg {
+    width: 74px; height: 74px; border-radius: 50%; border: 1px solid #ddd; margin: 10px auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 300; color: #aaa;
+  }
+  .profile .name { font-size: 20px; font-weight: 400; letter-spacing: 1px; color: #111; }
+  .profile .email { font-size: 12px; color: #bbb; }
+  .profile .id { font-size: 10px; color: #ddd; }
+  .profile .stats { display: flex; gap: 10px; margin: 20px 0; }
+  .profile .stat {
+    flex: 1; border: 1px solid #e5e5e5; border-radius: 14px; padding: 14px 0;
+  }
+  .profile .stat .num { font-size: 24px; font-weight: 300; color: #111; }
+  .profile .stat .lbl { font-size: 11px; color: #bbb; letter-spacing: 1px; }
+  .profile .section {
+    border: 1px solid #e5e5e5; border-radius: 14px; padding: 14px; margin-bottom: 10px; text-align: left;
+  }
+  .profile .section .section-title {
+    font-size: 11px; color: #bbb; letter-spacing: 2px; display: flex; justify-content: space-between;
+  }
+  .profile .section .section-title .edit { font-size: 13px; color: #ccc; cursor: pointer; }
+  .profile .section .content { margin-top: 8px; font-size: 14px; color: #666; }
+  .profile .section .content.muted { color: #ccc; }
+  .profile .settings {
+    border: 1px solid #e5e5e5; border-radius: 14px; padding: 14px; margin-bottom: 10px;
+  }
+  .profile .settings .row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .profile .settings .row .left { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #666; }
+  .profile .settings .toggle {
+    width: 40px; height: 22px; background: #ddd; border-radius: 11px; position: relative; cursor: pointer;
+  }
+  .profile .settings .toggle .knob { width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .profile .logout {
+    border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-top: 10px;
+    font-size: 13px; letter-spacing: 1px; color: #111; cursor: pointer;
+  }
+
+  .nav-bar {
+    display: flex; justify-content: space-around; padding: 10px 0 0;
+    border-top: 1px solid #eee; margin-top: 16px;
+  }
+  .nav-bar .nav-item { font-size: 20px; color: #ccc; text-align: center; }
+  .nav-bar .nav-item.active { color: #111; }
+  .nav-bar .nav-item span { display: block; font-size: 10px; margin-top: 2px; }
+
+  .browser-view { text-align: center; margin-top: 40px; padding: 30px; background: white; border-radius: 20px; max-width: 800px; }
+  .browser-view h2 { font-weight: 300; letter-spacing: 2px; margin-bottom: 20px; }
+  .browser-view .step { text-align: left; margin: 15px 0; padding: 12px; background: #f8f8f8; border-radius: 10px; font-size: 14px; color: #333; }
+  .browser-view .step b { color: #111; }
+  .browser-view code { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1><span>FEATHER</span>FRAME</h1>
+<div class="subtitle">DESIGN PREVIEW</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div class="phone-frame">
+  <div class="phone-inner">
+    <div class="notch"></div>
+    <div class="screen-label">LOGIN SCREEN</div>
+    <div class="login">
+      <div class="logo-feather">FEATHER</div>
+      <div class="logo-frame">FRAME</div>
+      <div class="tagline">bird photography</div>
+      <div class="card">
+        <h3>Sign In</h3>
+        <div class="input"><span class="icon">✉</span> Email</div>
+        <div class="input"><span class="icon">🔒</span> Password</div>
+        <div class="btn">Sign In</div>
+      </div>
+      <div class="link">Don't have an account? Register</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CAMERA SCREEN ========== -->
+<div class="phone-frame">
+  <div class="phone-inner">
+    <div class="notch"></div>
+    <div class="screen-label">CAMERA SCREEN</div>
+    <div class="camera-top">
+      <span>FEATHERFRAME</span>
+      <span class="live">● LIVE</span>
+    </div>
+    <div class="camera-viewfinder">Camera Preview Area</div>
+    <div class="camera-controls">
+      <div class="ctrl-label">CONTROLS</div>
+      <div class="slider-row">
+        <span class="label">ISO</span>
+        <div class="track"><div class="fill" style="width:35%"></div><div class="thumb" style="left:33%"></div></div>
+        <span class="val">400</span>
+      </div>
+      <div style="font-size:11px;color:#aaa;margin:2px 0">SHUTTER  1/1000</div>
+      <div class="chips">
+        <span class="chip active">1/8000</span><span class="chip">1/2000</span><span class="chip">1/500</span>
+        <span class="chip">1/125</span><span class="chip">1/30</span>
+      </div>
+      <div class="slider-row">
+        <span class="label">FOCUS</span>
+        <div class="track"><div class="fill" style="width:0%"></div><div class="thumb" style="left:0%"></div></div>
+        <span class="val">∞</span>
+      </div>
+      <div class="slider-row">
+        <span class="label">WB</span>
+        <div class="track"><div class="fill" style="width:40%"></div><div class="thumb" style="left:38%"></div></div>
+        <span class="val">5500K</span>
+      </div>
+      <div style="text-align:center;margin-top:6px"><span class="chip active">MANUAL</span></div>
+    </div>
+    <div class="camera-bottom">
+      <span class="icon-btn">◉</span>
+      <span class="icon-btn">⚙</span>
+      <div class="shutter"><div class="dot"></div></div>
+      <span class="icon-btn">🖼</span>
+      <span class="icon-btn">⌖</span>
+    </div>
+    <div class="camera-status">RAW capture triggered</div>
+    <div class="nav-bar">
+      <div class="nav-item"><span>🏠</span><span>Feed</span></div>
+      <div class="nav-item active"><span>📷</span><span>Camera</span></div>
+      <div class="nav-item"><span>👤</span><span>Profile</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FEED SCREEN ========== -->
+<div class="phone-frame">
+  <div class="phone-inner">
+    <div class="notch"></div>
+    <div class="screen-label">FEED SCREEN</div>
+    <div class="feed-header">
+      <h2>Feed</h2>
+      <span class="cam-icon">📷</span>
+    </div>
+    
+    <div class="feed-card">
+      <div class="user">
+        <div class="avatar">J</div>
+        <div><div class="name">Jane Doe</div><div class="species">Bird: BRD_042</div></div>
+        <div class="coords">14.583, 120.982</div>
+      </div>
+      <div class="image">📷 RAW Preview</div>
+      <div class="actions">
+        <span class="icon-like">♡</span>
+        <span class="icon-comment">💬</span>
+        <span class="date">2026-06-13</span>
+      </div>
+    </div>
+
+    <div class="feed-card">
+      <div class="user">
+        <div class="avatar">J</div>
+        <div><div class="name">Jane Doe</div><div class="species">Bird: BRD_017</div></div>
+        <div class="coords">14.560, 121.010</div>
+      </div>
+      <div class="image">📷 RAW Preview</div>
+      <div class="actions">
+        <span class="icon-like liked">♥</span>
+        <span class="icon-comment">💬</span>
+        <span class="date">2026-06-12</span>
+      </div>
+    </div>
+
+    <div class="nav-bar">
+      <div class="nav-item active"><span>🏠</span><span>Feed</span></div>
+      <div class="nav-item"><span>📷</span><span>Camera</span></div>
+      <div class="nav-item"><span>👤</span><span>Profile</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PROFILE SCREEN ========== -->
+<div class="phone-frame">
+  <div class="phone-inner">
+    <div class="notch"></div>
+    <div class="screen-label">PROFILE SCREEN</div>
+    <div class="profile">
+      <div class="avatar-lg">JD</div>
+      <div class="name">Jane Doe</div>
+      <div class="email">jane@example.com</div>
+      <div class="id">ID: PHOTO_123456</div>
+      
+      <div class="stats">
+        <div class="stat"><div class="num">42</div><div class="lbl">Captures</div></div>
+        <div class="stat"><div class="num">17</div><div class="lbl">Species</div></div>
+        <div class="stat"><div class="num">128</div><div class="lbl">Likes</div></div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">BIOGRAPHY <span class="edit">✎</span></div>
+        <div class="content muted">No bio yet</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">CAMERA GEAR <span class="edit">✎</span></div>
+        <div class="content">Canon EOS R5, RF 100-500mm</div>
+      </div>
+
+      <div class="settings">
+        <div style="font-size:11px;color:#bbb;letter-spacing:2px;margin-bottom:10px">SETTINGS</div>
+        <div class="row">
+          <div class="left">🌙 Dark Mode</div>
+          <div class="toggle"><div class="knob"></div></div>
+        </div>
+      </div>
+
+      <div class="logout">Sign Out</div>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-item"><span>🏠</span><span>Feed</span></div>
+      <div class="nav-item"><span>📷</span><span>Camera</span></div>
+      <div class="nav-item active"><span>👤</span><span>Profile</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- How to open in Android Studio -->
+<div class="browser-view">
+  <h2>📱 To See It For Real in Android Studio</h2>
+  <div class="step"><b>Step 1:</b> Open Android Studio → <b>File → Open</b></div>
+  <div class="step"><b>Step 2:</b> Navigate to <code>d:\CCC151\WIld photography app\FeatherFrame</code> → Click OK</div>
+  <div class="step"><b>Step 3:</b> Wait for Gradle sync to finish (may take 2-5 minutes)</div>
+  <div class="step"><b>Step 4:</b> Open any screen file, e.g. <code>LoginScreen.kt</code> → Click the <b>⚡ Split</b> or <b>Preview</b> tab at top-right</div>
+  <div class="step"><b>Step 5:</b> Or click <b>Run ▶</b> and select an emulator to see the live app</div>
+  <div style="margin-top:25px; color: #999; font-size:13px;">This HTML preview above shows the exact layout and style of all 4 screens.</div>
+</div>
+
+</body>
+</html>

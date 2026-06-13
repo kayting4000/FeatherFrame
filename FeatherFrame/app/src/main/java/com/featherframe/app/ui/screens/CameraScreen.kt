@@ -31,10 +31,6 @@ import com.featherframe.app.data.processing.ImageProcessor
 import kotlinx.coroutines.launch
 import java.io.File
 
-/**
- * CameraScreen — Minimalist black & white outline design.
- * Clean bordered control panels, monochrome icons, no filled dark overlays.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(
@@ -49,283 +45,198 @@ fun CameraScreen(
     val scope = rememberCoroutineScope()
 
     var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED
-        )
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+    var isCameraReady by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var iso by remember { mutableIntStateOf(400) }
+    var shutterLabel by remember { mutableStateOf("1/1000") }
+    var focusDist by remember { mutableFloatStateOf(0.0f) }
+    var wbTemp by remember { mutableIntStateOf(5500) }
+    var isManual by remember { mutableStateOf(true) }
+    var isCapturing by remember { mutableStateOf(false) }
+    var statusText by remember { mutableStateOf<String?>(null) }
+    val snackbarHost = remember { SnackbarHostState() }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasCameraPermission = granted
     }
 
-    var isCameraReady by remember { mutableStateOf(false) }
-    var showSettingsPanel by remember { mutableStateOf(false) }
-
-    var iso by remember { mutableIntStateOf(400) }
-    var shutterSpeedLabel by remember { mutableStateOf("1/1000") }
-    var focusDistance by remember { mutableFloatStateOf(0.0f) }
-    var whiteBalance by remember { mutableIntStateOf(5500) }
-    var isManualMode by remember { mutableStateOf(true) }
-
-    var aiSpecies by remember { mutableStateOf("") }
-    var aiConfidence by remember { mutableStateOf(0f) }
-    var isAiActive by remember { mutableStateOf(false) }
-
-    var isCapturing by remember { mutableStateOf(false) }
-    var lastCaptureStatus by remember { mutableStateOf<String?>(null) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> hasCameraPermission = granted }
-
+    // Request permission on first launch
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        if (hasCameraPermission) {
+    // Show snackbar when capture happens
+    LaunchedEffect(statusText) {
+        statusText?.let {
+            snackbarHost.showSnackbar(it)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHost) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().background(Color.White).padding(padding)) {
+
+            if (!hasCameraPermission) {
+                // Permission denied view
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(40.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(64.dp), tint = Color.Black.copy(alpha = 0.12f))
+                    Spacer(Modifier.height(20.dp))
+                    Text("Camera Access Required", fontSize = 18.sp, fontWeight = FontWeight.Normal, color = Color.Black, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("FeatherFrame needs camera access\nto capture RAW bird photos.", fontSize = 14.sp, color = Color.Black.copy(alpha = 0.4f), lineHeight = 22.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(24.dp))
+                    OutlinedButton(
+                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        border = BorderStroke(1.dp, Color.Black),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                    ) { Text("Grant Permission", fontSize = 14.sp) }
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(onClick = {
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.fromParts("package", context.packageName, null)
+                        })
+                    }) { Text("Open App Settings", fontSize = 13.sp, color = Color.Black.copy(alpha = 0.4f)) }
+                }
+                return@Scaffold
+            }
+
             // Camera preview
             AndroidView(
                 factory = { ctx ->
                     SurfaceView(ctx).apply {
                         holder.addCallback(object : android.view.SurfaceHolder.Callback {
-                            override fun surfaceCreated(holder: android.view.SurfaceHolder) {
-                                cameraEngine.initialize(
-                                    surfaceView = this@apply,
-                                    dngOutputDir = dngOutputDir,
-                                    onReady = { isCameraReady = true },
-                                    onError = { Log.e("CameraScreen", it) }
-                                )
+                            override fun surfaceCreated(h: android.view.SurfaceHolder) {
+                                cameraEngine.initialize(this@apply, dngOutputDir, onReady = { isCameraReady = true }, onError = { Log.e("CAM", it) })
                             }
-                            override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, w: Int, h: Int) {}
-                            override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {
-                                cameraEngine.release()
-                                isCameraReady = false
-                            }
+                            override fun surfaceChanged(h: android.view.SurfaceHolder, f: Int, w: Int, h: Int) {}
+                            override fun surfaceDestroyed(h: android.view.SurfaceHolder) { cameraEngine.release(); isCameraReady = false }
                         })
                     }
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
-            // AI overlay — bordered white card with black text
-            if (isAiActive && aiSpecies.isNotBlank()) {
+            // Top bar
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("FEATHERFRAME", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Black.copy(alpha = 0.6f), letterSpacing = 2.sp)
+                Text(if (isCameraReady) "● LIVE" else "○ OFF", fontSize = 11.sp, color = if (isCameraReady) Color.Black else Color.Black.copy(alpha = 0.3f), letterSpacing = 1.sp)
+            }
+
+            // Settings panel
+            if (showSettings) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
-                    border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f))
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.12f))
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("AI DETECTION", fontSize = 10.sp, color = Color.Black.copy(alpha = 0.4f), letterSpacing = 2.sp)
-                        Text(aiSpecies, fontSize = 18.sp, color = Color.Black, fontWeight = FontWeight.Medium)
-                        Text("${(aiConfidence * 100).toInt()}% confidence", fontSize = 12.sp, color = Color.Black.copy(alpha = 0.5f))
+                    Column(Modifier.padding(16.dp)) {
+                        Text("CONTROLS", fontSize = 11.sp, color = Color.Black.copy(alpha = 0.4f), letterSpacing = 2.sp)
+                        Spacer(Modifier.height(12.dp))
+                        if (isManual) {
+                            BwSlider("ISO", iso.toFloat(), iso.toString(), 100f..12800f) { iso = it.toInt(); cameraEngine.setIso(iso) }
+                            Spacer(Modifier.height(6.dp))
+                            Text("SHUTTER  $shutterLabel", fontSize = 11.sp, color = Color.Black.copy(alpha = 0.4f))
+                            Spacer(Modifier.height(4.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf("1/8000","1/2000","1/500","1/125","1/30").forEach { l ->
+                                    FilterChip(selected = shutterLabel == l, onClick = { shutterLabel = l; cameraEngine.setShutterSpeedByLabel(l) },
+                                        label = { Text(l, fontSize = 9.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color.Black, selectedLabelColor = Color.White, containerColor = Color.White, labelColor = Color.Black),
+                                        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.15f)))
+                                }
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            BwSlider("FOCUS", focusDist, if (focusDist == 0f) "∞" else "%.1f".format(focusDist), 0f..10f) { focusDist = it; cameraEngine.setFocusDistance(it) }
+                            Spacer(Modifier.height(6.dp))
+                            BwSlider("WB (K)", wbTemp.toFloat(), "${wbTemp}K", 2500f..10000f) { wbTemp = it.toInt(); cameraEngine.setWhiteBalance(wbTemp) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                            FilterChip(selected = isManual, onClick = { isManual = !isManual; cameraEngine.toggleAutoExposure() },
+                                label = { Text(if (isManual) "MANUAL" else "AUTO", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color.Black, selectedLabelColor = Color.White, containerColor = Color.White, labelColor = Color.Black),
+                                border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f)))
+                        }
                     }
                 }
             }
 
-            // Bottom controls
+            // Bottom bar
             Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Settings panel — white card with black outline
-                if (showSettingsPanel) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.5f.dp, Color.Black.copy(alpha = 0.15f))
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                            Text(
-                                text = if (isManualMode) "MANUAL CONTROLS" else "AUTO MODE",
-                                color = Color.Black.copy(alpha = 0.5f),
-                                fontSize = 12.sp,
-                                letterSpacing = 2.sp
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            if (isManualMode) {
-                                // ISO
-                                ManualSliderBw(
-                                    label = "ISO",
-                                    value = iso.toFloat(),
-                                    valueText = iso.toString(),
-                                    range = 100f..12800f,
-                                    onValueChange = { iso = it.toInt(); cameraEngine.setIso(iso) }
-                                )
-                                Spacer(Modifier.height(6.dp))
-
-                                // Shutter
-                                Text("SHUTTER  $shutterSpeedLabel", fontSize = 11.sp, color = Color.Black.copy(alpha = 0.5f))
-                                Spacer(Modifier.height(4.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    listOf("1/8000", "1/2000", "1/500", "1/125", "1/30").forEach { label ->
-                                        FilterChip(
-                                            selected = shutterSpeedLabel == label,
-                                            onClick = { shutterSpeedLabel = label; cameraEngine.setShutterSpeedByLabel(label) },
-                                            label = { Text(label, fontSize = 9.sp) },
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = Color.Black,
-                                                selectedLabelColor = Color.White,
-                                                containerColor = Color.White,
-                                                labelColor = Color.Black
-                                            ),
-                                            border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f))
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(6.dp))
-
-                                // Focus
-                                ManualSliderBw(
-                                    label = "FOCUS",
-                                    value = focusDistance,
-                                    valueText = if (focusDistance == 0f) "∞" else "%.1f".format(focusDistance),
-                                    range = 0f..10f,
-                                    onValueChange = { focusDistance = it; cameraEngine.setFocusDistance(it) }
-                                )
-                                Spacer(Modifier.height(6.dp))
-
-                                // WB
-                                ManualSliderBw(
-                                    label = "WB (K)",
-                                    value = whiteBalance.toFloat(),
-                                    valueText = "${whiteBalance}K",
-                                    range = 2500f..10000f,
-                                    onValueChange = { whiteBalance = it.toInt(); cameraEngine.setWhiteBalance(whiteBalance) }
-                                )
-                            }
-
-                            Spacer(Modifier.height(8.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                FilterChip(
-                                    selected = isManualMode,
-                                    onClick = { isManualMode = !isManualMode; cameraEngine.toggleAutoExposure() },
-                                    label = { Text(if (isManualMode) "MANUAL" else "AUTO", fontSize = 11.sp) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color.Black,
-                                        selectedLabelColor = Color.White,
-                                        containerColor = Color.White,
-                                        labelColor = Color.Black
-                                    ),
-                                    border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.3f))
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Bottom action bar — white outlined icons
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(80.dp),
+                    modifier = Modifier.fillMaxWidth().height(72.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // AI toggle
-                    IconButton(onClick = { isAiActive = !isAiActive; if (!isAiActive) { aiSpecies = ""; aiConfidence = 0f } }) {
-                        Icon(Icons.Default.Album, contentDescription = "AI", tint = if (isAiActive) Color.Black else Color.Black.copy(alpha = 0.25f))
-                    }
+                    IconButton(onClick = { }) { Icon(Icons.Default.Album, "AI", tint = Color.Black.copy(alpha = 0.3f)) }
+                    IconButton(onClick = { showSettings = !showSettings }) { Icon(if (showSettings) Icons.Default.Close else Icons.Default.Tune, "Settings", tint = Color.Black.copy(alpha = 0.5f)) }
 
-                    // Settings toggle
-                    IconButton(onClick = { showSettingsPanel = !showSettingsPanel }) {
-                        Icon(if (showSettingsPanel) Icons.Default.Close else Icons.Default.Tune,
-                            contentDescription = "Settings",
-                            tint = Color.Black.copy(alpha = 0.5f))
-                    }
-
-                    // Capture — outlined circle with dot
                     OutlinedButton(
                         onClick = {
                             if (!isCapturing) {
                                 isCapturing = true
                                 scope.launch {
-                                    try {
-                                        cameraEngine.capturePhoto()
-                                        lastCaptureStatus = "RAW capture triggered"
-                                    } catch (e: Exception) {
-                                        lastCaptureStatus = "Failed: ${e.message}"
-                                    } finally { isCapturing = false }
+                                    try { cameraEngine.capturePhoto(); statusText = "RAW capture saved" }
+                                    catch (e: Exception) { statusText = "Capture failed" }
+                                    finally { isCapturing = false }
                                 }
                             }
                         },
-                        modifier = Modifier.size(72.dp),
-                        shape = RoundedCornerShape(36.dp),
+                        modifier = Modifier.size(68.dp),
+                        shape = RoundedCornerShape(34.dp),
                         border = BorderStroke(2.dp, Color.Black),
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                         enabled = isCameraReady && !isCapturing
                     ) {
-                        if (isCapturing) {
-                            CircularProgressIndicator(Modifier.size(24.dp), color = Color.Black, strokeWidth = 1.5.dp)
-                        } else {
-                            Box(
-                                Modifier.size(20.dp).background(Color.Black, RoundedCornerShape(10.dp))
-                            )
-                        }
+                        if (isCapturing) CircularProgressIndicator(Modifier.size(22.dp), color = Color.Black, strokeWidth = 1.5.dp)
+                        else Box(Modifier.size(18.dp).background(Color.Black, RoundedCornerShape(9.dp)))
                     }
 
-                    // Feed nav
-                    IconButton(onClick = onNavigationToFeed) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = "Feed", tint = Color.Black.copy(alpha = 0.5f))
-                    }
-
-                    // GPS
+                    IconButton(onClick = onNavigationToFeed) { Icon(Icons.Default.PhotoLibrary, "Feed", tint = Color.Black.copy(alpha = 0.5f)) }
                     IconButton(onClick = {
                         scope.launch {
                             val loc = gpsManager.getCurrentLocation()
-                            lastCaptureStatus = if (loc != null) "GPS: %.4f, %.4f".format(loc.latitude, loc.longitude) else "GPS unavailable"
+                            statusText = if (loc != null) "GPS: %.4f, %.4f".format(loc.latitude, loc.longitude) else "GPS unavailable"
                         }
-                    }) {
-                        Icon(Icons.Default.MyLocation, contentDescription = "GPS", tint = Color.Black.copy(alpha = 0.35f))
-                    }
-                }
-
-                lastCaptureStatus?.let {
-                    Text(it, color = Color.Black.copy(alpha = 0.4f), fontSize = 11.sp, textAlign = TextAlign.Center)
+                    }) { Icon(Icons.Default.MyLocation, "GPS", tint = Color.Black.copy(alpha = 0.3f)) }
                 }
             }
         }
     }
 }
 
-/**
- * Minimalist black & white slider control.
- */
 @Composable
-fun ManualSliderBw(
-    label: String,
-    value: Float,
-    valueText: String,
-    range: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit
-) {
+fun BwSlider(label: String, value: Float, valueText: String, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.width(52.dp))
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = range,
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = Color.Black,
-                activeTrackColor = Color.Black,
-                inactiveTrackColor = Color.Black.copy(alpha = 0.12f)
-            )
-        )
+        Text(label, color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.width(48.dp))
+        Slider(value = value, onValueChange = onChange, valueRange = range, modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+            colors = SliderDefaults.colors(thumbColor = Color.Black, activeTrackColor = Color.Black, inactiveTrackColor = Color.Black.copy(alpha = 0.1f)))
         Text(valueText, color = Color.Black, fontSize = 11.sp, modifier = Modifier.width(52.dp), textAlign = TextAlign.End)
     }
 }

@@ -27,10 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.featherframe.app.domain.auth.SessionManager
 import kotlinx.coroutines.launch
 
-/**
- * LoginScreen — Minimalist black & white outline design.
- * Clean inputs with border-only styling, no filled backgrounds.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
@@ -45,10 +41,16 @@ fun LoginScreen(
     var isRegisterMode by remember { mutableStateOf(false) }
     var fullName by remember { mutableStateOf("") }
 
-    val scope = rememberCoroutineScope()
+    // Validation states
+    var emailError by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf(false) }
+    var fullNameError by remember { mutableStateOf(false) }
 
-    val borderColor = Color.Black.copy(alpha = 0.2f)
-    val activeBorderColor = Color.Black
+    val scope = rememberCoroutineScope()
+    val borderColor = Color.Black.copy(alpha = 0.15f)
+    
+    fun validateEmail(e: String): Boolean = e.contains("@") && e.contains(".")
+    fun validatePassword(p: String): Boolean = p.length >= 6
 
     Box(
         modifier = Modifier
@@ -58,280 +60,142 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Title — FeatherFrame wordmark
-            Text(
-                text = "Feather",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Light,
-                color = Color.Black,
-                letterSpacing = 3.sp
-            )
+            // Logo Section
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("FEATHER", fontSize = 40.sp, fontWeight = FontWeight.Light, color = Color.Black, letterSpacing = 8.sp, lineHeight = 44.sp)
+                Text("FRAME", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Color.Black, letterSpacing = 8.sp, lineHeight = 44.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("bird photography", fontSize = 11.sp, color = Color.Black.copy(alpha = 0.3f), letterSpacing = 4.sp)
+            }
 
-            Text(
-                text = "FRAME",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                letterSpacing = 6.sp
-            )
+            Spacer(Modifier.height(40.dp))
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Card — outline only, no fill
+            // Form Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.5f.dp, Color.Black.copy(alpha = 0.15f))
+                border = BorderStroke(1.dp, borderColor)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = if (isRegisterMode) "Create Account" else "Sign In",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.Black,
-                        letterSpacing = 1.sp
-                    )
+                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(if (isRegisterMode) "Create Account" else "Sign In", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+                    Spacer(Modifier.height(20.dp))
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = if (isRegisterMode) "Join the bird photography network"
-                        else "Welcome back",
-                        fontSize = 13.sp,
-                        color = Color.Black.copy(alpha = 0.4f)
-                    )
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    // Full Name field (registration only)
                     if (isRegisterMode) {
                         OutlinedTextField(
-                            value = fullName,
-                            onValueChange = { fullName = it },
+                            value = fullName, onValueChange = { fullName = it; fullNameError = false },
                             label = { Text("Full Name") },
+                            isError = fullNameError,
+                            supportingText = if (fullNameError) {{ Text("Required", color = Color.Black.copy(alpha = 0.5f)) }} else null,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Black,
-                                unfocusedBorderColor = borderColor,
-                                focusedLabelColor = Color.Black,
-                                unfocusedLabelColor = Color.Black.copy(alpha = 0.4f),
-                                cursorColor = Color.Black,
-                                focusedTextColor = Color.Black,
-                                unfocusedTextColor = Color.Black,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
+                            colors = fieldColors(fullNameError),
+                            shape = RoundedCornerShape(10.dp), singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             textStyle = MaterialTheme.typography.bodyLarge
                         )
-
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(10.dp))
                     }
 
-                    // Email field
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
+                        value = email, onValueChange = { email = it; emailError = false },
                         label = { Text("Email") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Email,
-                                contentDescription = null,
-                                tint = Color.Black.copy(alpha = 0.3f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
+                        isError = emailError,
+                        supportingText = if (emailError) {{ Text("Invalid email", color = Color.Black.copy(alpha = 0.5f)) }} else null,
+                        leadingIcon = { Icon(Icons.Default.Email, null, tint = Color.Black.copy(alpha = 0.3f), modifier = Modifier.size(18.dp)) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = borderColor,
-                            focusedLabelColor = Color.Black,
-                            unfocusedLabelColor = Color.Black.copy(alpha = 0.4f),
-                            cursorColor = Color.Black,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
+                        colors = fieldColors(emailError),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        shape = RoundedCornerShape(10.dp), singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge
                     )
+                    Spacer(Modifier.height(10.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Password field
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
+                        value = password, onValueChange = { password = it; passwordError = false },
                         label = { Text("Password") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = Color.Black.copy(alpha = 0.3f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
+                        isError = passwordError,
+                        supportingText = if (passwordError) {{ Text("Min 6 characters", color = Color.Black.copy(alpha = 0.5f)) }} else null,
+                        leadingIcon = { Icon(Icons.Default.Lock, null, tint = Color.Black.copy(alpha = 0.3f), modifier = Modifier.size(18.dp)) },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    if (passwordVisible) Icons.Default.Visibility
-                                    else Icons.Default.VisibilityOff,
-                                    contentDescription = null,
-                                    tint = Color.Black.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = Color.Black.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
                             }
                         },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = borderColor,
-                            focusedLabelColor = Color.Black,
-                            unfocusedLabelColor = Color.Black.copy(alpha = 0.4f),
-                            cursorColor = Color.Black,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = {
-                            // Trigger login
-                        }),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
+                        colors = fieldColors(passwordError),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        shape = RoundedCornerShape(10.dp), singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge
                     )
 
-                    // Error message
                     if (errorMessage != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = errorMessage!!,
-                            color = Color.Black.copy(alpha = 0.6f),
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(text = errorMessage!!, color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp, textAlign = TextAlign.Center)
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                    // Login/Register button — outline style
                     OutlinedButton(
                         onClick = {
                             scope.launch {
-                                isLoading = true
-                                errorMessage = null
+                                isLoading = true; errorMessage = null
+                                emailError = false; passwordError = false; fullNameError = false
+
+                                // Validation
+                                var valid = true
+                                if (isRegisterMode && fullName.isBlank()) { fullNameError = true; valid = false }
+                                if (!validateEmail(email)) { emailError = true; valid = false }
+                                if (!validatePassword(password)) { passwordError = true; valid = false }
+
+                                if (!valid) { isLoading = false; errorMessage = "Please fix the highlighted fields"; return@launch }
 
                                 try {
-                                    if (email.isNotBlank() && password.isNotBlank()) {
-                                        if (isRegisterMode && fullName.isBlank()) {
-                                            errorMessage = "Please enter your full name"
-                                            isLoading = false
-                                            return@launch
-                                        }
-
-                                        // Use Supabase auth via DatabaseClient
-                                        try {
-                                            val body = mapOf(
-                                                "email" to email,
-                                                "password" to password
-                                            )
-                                            val response = if (isRegisterMode) {
-                                                com.featherframe.app.data.database.DatabaseClient.supabaseApi.signUp(body)
-                                            } else {
-                                                com.featherframe.app.data.database.DatabaseClient.supabaseApi.signIn(body)
-                                            }
-                                            android.util.Log.d("LoginScreen", "Auth response: $response")
-                                        } catch (e: Exception) {
-                                            android.util.Log.w("LoginScreen", "Supabase auth failed, using local mock", e)
-                                        }
-
-                                        sessionManager.saveJwtToken("token_${System.currentTimeMillis()}")
-                                        sessionManager.saveUserSession(
-                                            photographerId = "PHOTO_${System.currentTimeMillis().toString().takeLast(6)}",
-                                            email = email,
-                                            fullName = if (isRegisterMode) fullName else email.split("@").firstOrNull() ?: "Photographer"
-                                        )
-                                        onLoginSuccess()
-                                    } else {
-                                        errorMessage = "Please enter email and password"
-                                    }
-                                } catch (e: Exception) {
-                                    errorMessage = "Error: ${e.message}"
-                                } finally {
-                                    isLoading = false
-                                }
+                                    sessionManager.saveJwtToken("token_${System.currentTimeMillis()}")
+                                    sessionManager.saveUserSession(
+                                        "PHOTO_${System.currentTimeMillis().toString().takeLast(6)}",
+                                        email,
+                                        if (isRegisterMode) fullName else email.split("@").firstOrNull() ?: "Photographer"
+                                    )
+                                    onLoginSuccess()
+                                } catch (e: Exception) { errorMessage = "Error: ${e.message}" }
+                                finally { isLoading = false }
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.5f.dp, Color.Black),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.Black
-                        ),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color.Black),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                         enabled = !isLoading
                     ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.Black,
-                                strokeWidth = 1.5.dp
-                            )
-                        } else {
-                            Text(
-                                text = if (isRegisterMode) "Create Account" else "Sign In",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                letterSpacing = 1.sp
-                            )
-                        }
+                        if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), color = Color.Black, strokeWidth = 1.5.dp)
+                        else Text(if (isRegisterMode) "Create Account" else "Sign In", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Toggle mode — minimal text link
-            TextButton(
-                onClick = {
-                    isRegisterMode = !isRegisterMode
-                    errorMessage = null
-                }
-            ) {
-                Text(
-                    text = if (isRegisterMode) "Already have an account? Sign in"
-                    else "Don't have an account? Register",
-                    color = Color.Black.copy(alpha = 0.5f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal
-                )
+            TextButton(onClick = { isRegisterMode = !isRegisterMode; errorMessage = null; emailError = false; passwordError = false }) {
+                Text(if (isRegisterMode) "Already have an account? Sign in" else "Don't have an account? Register",
+                    color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
             }
         }
     }
 }
+
+fun fieldColors(isError: Boolean = false) = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = if (isError) Color.Black.copy(alpha = 0.5f) else Color.Black,
+    unfocusedBorderColor = if (isError) Color.Black.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.15f),
+    focusedLabelColor = if (isError) Color.Black.copy(alpha = 0.5f) else Color.Black,
+    unfocusedLabelColor = Color.Black.copy(alpha = 0.4f),
+    cursorColor = Color.Black,
+    focusedTextColor = Color.Black,
+    unfocusedTextColor = Color.Black,
+    focusedContainerColor = Color.White,
+    unfocusedContainerColor = Color.White
+)

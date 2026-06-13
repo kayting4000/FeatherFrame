@@ -20,236 +20,174 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.featherframe.app.domain.auth.SessionManager
-import com.featherframe.app.domain.auth.GoogleAuthHelper
-import kotlinx.coroutines.launch
 
-/**
- * ProfileScreen — Minimalist black & white outline design.
- * Editable bio/gear, Google Drive auth link, bordered stat blocks.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     sessionManager: SessionManager,
-    googleAuthHelper: GoogleAuthHelper,
-    onLogout: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var bio by remember { mutableStateOf(sessionManager.getSecureString("bio") ?: "") }
-    var favoriteGear by remember { mutableStateOf(sessionManager.getSecureString("favorite_gear") ?: "") }
-    var isEditingBio by remember { mutableStateOf(false) }
-    var isEditingGear by remember { mutableStateOf(false) }
+    var gear by remember { mutableStateOf(sessionManager.getSecureString("favorite_gear") ?: "") }
+    var editingBio by remember { mutableStateOf(false) }
+    var editingGear by remember { mutableStateOf(false) }
     var bioInput by remember { mutableStateOf(bio) }
-    var gearInput by remember { mutableStateOf(favoriteGear) }
-    var driveConnected by remember { mutableStateOf(googleAuthHelper.isSignedIn()) }
-    var showDriveDialog by remember { mutableStateOf(false) }
+    var gearInput by remember { mutableStateOf(gear) }
+    var darkMode by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
-    val photographerName = sessionManager.getFullName() ?: "Photographer"
-    val photographerEmail = sessionManager.getPhotographerEmail() ?: "email@example.com"
-    val photographerId = sessionManager.getPhotographerId() ?: "unknown"
+    val name = sessionManager.getFullName() ?: "Photographer"
+    val email = sessionManager.getPhotographerEmail() ?: "email@example.com"
+    val pid = sessionManager.getPhotographerId() ?: "---"
+    val borderC = Color.Black.copy(alpha = 0.1f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Avatar — outlined circle
+            // Avatar
             Box(
-                modifier = Modifier
-                    .size(90.dp)
-                    .clip(CircleShape)
-                    .border(1.5f.dp, Color.Black.copy(alpha = 0.2f), CircleShape),
+                modifier = Modifier.size(80.dp).clip(CircleShape).border(1.dp, borderC, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    photographerName.take(2).uppercase(),
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Light,
-                    color = Color.Black.copy(alpha = 0.5f)
+                Text(name.take(2).uppercase(), fontSize = 28.sp, fontWeight = FontWeight.Light, color = Color.Black.copy(alpha = 0.4f))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(name, fontSize = 20.sp, fontWeight = FontWeight.Normal, color = Color.Black, letterSpacing = 1.sp)
+            Text(email, fontSize = 12.sp, color = Color.Black.copy(alpha = 0.35f))
+            Text("ID: $pid", fontSize = 10.sp, color = Color.Black.copy(alpha = 0.15f))
+
+            Spacer(Modifier.height(24.dp))
+
+            // Stats
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatBw("42", "Captures", Modifier.weight(1f))
+                StatBw("17", "Species", Modifier.weight(1f))
+                StatBw("128", "Likes", Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Biography
+            SectionBw("BIOGRAPHY", editingBio, onEdit = {
+                if (editingBio) { bio = bioInput; sessionManager.putSecureString("bio", bio) }
+                editingBio = !editingBio; bioInput = bio
+            }) {
+                if (editingBio) {
+                    OutlinedTextField(value = bioInput, onValueChange = { bioInput = it },
+                        modifier = Modifier.fillMaxWidth().height(90.dp),
+                        placeholder = { Text("About you...", color = Color.Black.copy(alpha = 0.2f)) },
+                        colors = fieldColors(), shape = RoundedCornerShape(10.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(if (bio.isNotBlank()) bio else "No bio yet", fontSize = 14.sp,
+                        color = if (bio.isNotBlank()) Color.Black.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.2f))
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Gear
+            SectionBw("CAMERA GEAR", editingGear, onEdit = {
+                if (editingGear) { gear = gearInput; sessionManager.putSecureString("favorite_gear", gear) }
+                editingGear = !editingGear; gearInput = gear
+            }) {
+                if (editingGear) {
+                    OutlinedTextField(value = gearInput, onValueChange = { gearInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("e.g. Canon EOS R5", color = Color.Black.copy(alpha = 0.2f)) },
+                        colors = fieldColors(), shape = RoundedCornerShape(10.dp), singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CameraAlt, null, tint = Color.Black.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (gear.isNotBlank()) gear else "No gear set", fontSize = 14.sp,
+                            color = if (gear.isNotBlank()) Color.Black.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.2f))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Settings
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, borderC)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("SETTINGS", fontSize = 11.sp, color = Color.Black.copy(alpha = 0.35f), letterSpacing = 2.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DarkMode, null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text("Dark Mode", fontSize = 14.sp, color = Color.Black.copy(alpha = 0.6f))
+                        }
+                        Switch(checked = darkMode, onCheckedChange = { darkMode = it },
+                            colors = SwitchDefaults.colors(checkedTrackColor = Color.Black, checkedThumbColor = Color.White,
+                                uncheckedTrackColor = Color.Black.copy(alpha = 0.1f), uncheckedThumbColor = Color.Black.copy(alpha = 0.4f)))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Logout confirmation dialog
+            if (showLogoutDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLogoutDialog = false },
+                    containerColor = Color.White,
+                    title = { Text("Sign Out", fontWeight = FontWeight.Medium, color = Color.Black) },
+                    text = { Text("Are you sure you want to sign out?", color = Color.Black.copy(alpha = 0.6f)) },
+                    confirmButton = {
+                        TextButton(onClick = { showLogoutDialog = false; sessionManager.clearSession(); onLogout() }) {
+                            Text("Sign Out", color = Color.Black)
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showLogoutDialog = false },
+                            border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                        ) { Text("Cancel", fontSize = 13.sp) }
+                    }
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            Text(photographerName, fontSize = 22.sp, fontWeight = FontWeight.Normal, color = Color.Black, letterSpacing = 1.sp)
-            Text(photographerEmail, fontSize = 13.sp, color = Color.Black.copy(alpha = 0.4f))
-            Text("ID: $photographerId", fontSize = 10.sp, color = Color.Black.copy(alpha = 0.2f))
-
-            Spacer(Modifier.height(24.dp))
-
-            // Stats row — outlined bordered blocks
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlockBw("42", "Captures", Modifier.weight(1f))
-                StatBlockBw("17", "Species", Modifier.weight(1f))
-                StatBlockBw("128", "Likes", Modifier.weight(1f))
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Biography
-            SectionBw(
-                title = "BIOGRAPHY",
-                isEditing = isEditingBio,
-                onEditToggle = {
-                    if (isEditingBio) { bio = bioInput; sessionManager.putSecureString("bio", bio) }
-                    isEditingBio = !isEditingBio; bioInput = bio
-                }
-            ) {
-                if (isEditingBio) {
-                    OutlinedTextField(
-                        value = bioInput, onValueChange = { bioInput = it },
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                        placeholder = { Text("About you...", color = Color.Black.copy(alpha = 0.25f)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black, unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
-                            cursorColor = Color.Black, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.White, unfocusedContainerColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
-                } else {
-                    Text(
-                        if (bio.isNotBlank()) bio else "No biography yet",
-                        fontSize = 14.sp,
-                        color = if (bio.isNotBlank()) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.25f)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // Gear
-            SectionBw(
-                title = "CAMERA GEAR",
-                isEditing = isEditingGear,
-                onEditToggle = {
-                    if (isEditingGear) { favoriteGear = gearInput; sessionManager.putSecureString("favorite_gear", favoriteGear) }
-                    isEditingGear = !isEditingGear; gearInput = favoriteGear
-                }
-            ) {
-                if (isEditingGear) {
-                    OutlinedTextField(
-                        value = gearInput, onValueChange = { gearInput = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g. Canon EOS R5", color = Color.Black.copy(alpha = 0.25f)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black, unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
-                            cursorColor = Color.Black, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.White, unfocusedContainerColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp), singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null,
-                            tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (favoriteGear.isNotBlank()) favoriteGear else "No gear configured",
-                            fontSize = 14.sp,
-                            color = if (favoriteGear.isNotBlank()) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.25f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // Google Drive connection
-            SectionBw(title = "CLOUD SYNC", isEditing = false, onEditToggle = {}) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Cloud, contentDescription = null,
-                        tint = if (driveConnected) Color.Black else Color.Black.copy(alpha = 0.3f),
-                        modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (driveConnected) "Google Drive connected" else "Not connected",
-                        fontSize = 14.sp,
-                        color = if (driveConnected) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.4f)
-                    )
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(
-                        onClick = {
-                            if (driveConnected) {
-                                googleAuthHelper.signOut()
-                                driveConnected = false
-                            } else {
-                                showDriveDialog = true
-                            }
-                        },
-                        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(if (driveConnected) "Disconnect" else "Connect",
-                            fontSize = 12.sp, letterSpacing = 0.5.sp)
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Logout
-            OutlinedButton(
-                onClick = {
-                    googleAuthHelper.signOut()
-                    sessionManager.clearSession()
-                    onLogout()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.5f.dp, Color.Black.copy(alpha = 0.2f)),
+            OutlinedButton(onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, borderC),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
             ) {
-                Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Logout, null, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Sign Out", fontSize = 14.sp, fontWeight = FontWeight.Normal, letterSpacing = 1.sp)
+                Text("Sign Out", fontSize = 13.sp, letterSpacing = 1.sp)
             }
-
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-/**
- * Outlined bordered section card for profile fields.
- */
 @Composable
-fun SectionBw(
-    title: String,
-    isEditing: Boolean,
-    onEditToggle: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
+fun SectionBw(title: String, editing: Boolean, onEdit: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.5f.dp, Color.Black.copy(alpha = 0.12f))
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(title, fontSize = 12.sp, color = Color.Black.copy(alpha = 0.4f), letterSpacing = 2.sp)
-                if (title != "CLOUD SYNC") {
-                    IconButton(onClick = onEditToggle, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = Color.Black.copy(alpha = 0.35f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                Text(title, fontSize = 11.sp, color = Color.Black.copy(alpha = 0.35f), letterSpacing = 2.sp)
+                IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
+                    Icon(if (editing) Icons.Default.Check else Icons.Default.Edit, "Edit",
+                        tint = Color.Black.copy(alpha = 0.35f), modifier = Modifier.size(14.dp))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -258,21 +196,23 @@ fun SectionBw(
     }
 }
 
-/**
- * Minimalist black & white stat block with border outline.
- */
 @Composable
-fun StatBlockBw(value: String, label: String, modifier: Modifier = Modifier) {
+fun StatBw(value: String, label: String, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .background(Color.White, RoundedCornerShape(16.dp))
-            .border(1.5f.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-            .padding(vertical = 18.dp),
+        modifier = modifier.background(Color.White, RoundedCornerShape(14.dp))
+            .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
+            .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 26.sp, fontWeight = FontWeight.Light, color = Color.Black)
-            Text(label, fontSize = 11.sp, color = Color.Black.copy(alpha = 0.4f), letterSpacing = 1.sp)
+            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Light, color = Color.Black)
+            Text(label, fontSize = 11.sp, color = Color.Black.copy(alpha = 0.35f), letterSpacing = 1.sp)
         }
     }
 }
+
+fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Color.Black, unfocusedBorderColor = Color.Black.copy(alpha = 0.12f),
+    cursorColor = Color.Black, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black,
+    focusedContainerColor = Color.White, unfocusedContainerColor = Color.White
+)

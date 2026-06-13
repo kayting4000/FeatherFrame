@@ -91,7 +91,9 @@ class SyncUploadWorker(
             val imageProcessor = ImageProcessor()
 
             // Initialize Drive service
-            val driveInitialized = driveService.initialize()
+            val googleAuth = com.featherframe.app.domain.auth.GoogleAuthHelper(applicationContext)
+            googleAuth.silentSignIn { }
+            val driveInitialized = driveService.initialize(googleAuth)
             if (!driveInitialized) {
                 Log.w(TAG, "Drive service not initialized, will retry")
                 return@withContext Result.retry()
